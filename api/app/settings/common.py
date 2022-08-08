@@ -410,6 +410,7 @@ CHARGEBEE_SITE = env("CHARGEBEE_SITE", default=None)
 
 # Logging configuration
 LOG_LEVEL = env.str("LOG_LEVEL", default="WARNING")
+LOG_STREAM_OUTPUT = env.str("LOG_STREAM_OUTPUT", default="stderr")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,
@@ -421,6 +422,7 @@ LOGGING = {
             "level": LOG_LEVEL,
             "class": "logging.StreamHandler",
             "formatter": "generic",
+            "stream": sys.stdout if LOG_STREAM_OUTPUT == "stdout" else sys.stderr,
         }
     },
     "loggers": {"": {"level": LOG_LEVEL, "handlers": ["console"]}},
