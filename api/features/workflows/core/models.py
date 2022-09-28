@@ -2,9 +2,9 @@ import logging
 import typing
 
 from core.helpers import get_current_site_url
+from core.mail import safe_send_mail as send_mail
 from core.models import AbstractBaseExportableModel
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db import models
 from django.template.loader import render_to_string
 from django.utils import timezone
