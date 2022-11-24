@@ -41,6 +41,10 @@ class Project(LifecycleModelMixin, AbstractBaseExportableModel):
         default=False,
         help_text="Enable this to trigger a realtime(sse) event whenever the value of a flag changes",
     )
+    enable_case_sensitive_flags = models.BooleanField(
+        default=False,
+        help_text="Allow for case sensitive flags to be defined",
+    )
 
     objects = ProjectManager()
 
