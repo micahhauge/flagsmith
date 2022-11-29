@@ -112,19 +112,20 @@ class Feature(CustomLifecycleModelMixin, AbstractBaseExportableModel):
         super(Feature, self).validate_unique(*args, **kwargs)
 
         # handle case insensitive names per project, as above check allows it
-        if (
-            Feature.objects.filter(project=self.project, name__iexact=self.name)
-            .exclude(pk=self.pk)
-            .exists()
-        ):
-            raise ValidationError(
-                {
-                    NON_FIELD_ERRORS: [
-                        "Feature with that name already exists for this project. Note that feature "
-                        "names are case insensitive.",
-                    ],
-                }
-            )
+        if not Project.enable_case_sensitive_flags:
+            if (
+                Feature.objects.filter(project=self.project, name__iexact=self.name)
+                .exclude(pk=self.pk)
+                .exists()
+            ):
+                raise ValidationError(
+                    {
+                        NON_FIELD_ERRORS: [
+                            "Feature with that name already exists for this project. Note that feature "
+                            "names are case insensitive.",
+                        ],
+                    }
+                )
 
     def __str__(self):
         return "Project %s - Feature %s" % (self.project.name, self.name)

@@ -453,7 +453,7 @@ const CreateFlag = class extends Component {
                               maxLength: FEATURE_ID_MAXLENGTH,
                           }}
                           value={name}
-                          onChange={e => this.setState({ name: Format.enumeration.set(Utils.safeParseEventValue(e)).toLowerCase() })}
+                          onChange={e => this.setState({ name: Format.enumeration.set(Utils.safeParseEventValue(e)) })}
                           isValid={name && name.length}
                           type="text" title={isEdit ? 'ID' : 'ID*'}
                           placeholder="E.g. header_size"

@@ -8,7 +8,7 @@ module.exports = {
             return Format.camelCase(value.replace(/_/g, ' '));
         },
         set(value) { // My Constant > MY_CONSTANT
-            return value.replace(/ /g, '_').toUpperCase();
+            return value.replace(/ /g, '_');
         },
     },
 
