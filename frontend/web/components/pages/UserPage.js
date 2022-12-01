@@ -74,22 +74,11 @@ const UserPage = class extends Component {
 
 
     getActualFlags = () => {
-        const { identity, id, environmentId } = this.props.match.params;
-        if (Utils.getFlagsmithHasFeature('use_admin_identity_featurestates')) {
-            const url = `${Project.api}environments/${environmentId}/${Utils.getIdentitiesEndpoint()}/${id}/${Utils.getFeatureStatesEndpoint()}/all/`;
-            _data.get(url).then((res) => {
-                this.setState({ actualFlags: _.keyBy(res, v => v.feature.name) });
-            }).catch((err) => {
-            });
-        } else {
-            const url = `${Utils.getSDKEndpoint()}identities/?identifier=${this.props.match.params.identity}`;
-            fetch(url, {
-                headers: { 'X-Environment-Key': this.props.match.params.environmentId },
-            }).then(res => res.json()).then((res) => {
-                this.setState({ actualFlags: _.keyBy(res.flags, v => v.feature.name) });
-            }).catch((err) => {
-            });
-        }
+        const { id, environmentId } = this.props.match.params;
+        const url = `${Project.api}environments/${environmentId}/${Utils.getIdentitiesEndpoint()}/${id}/${Utils.getFeatureStatesEndpoint()}/all/`;
+        _data.get(url).then((res) => {
+            this.setState({ actualFlags: _.keyBy(res, v => v.feature.name) });
+        }).catch((err) => {});
     }
 
     onTraitSaved = () => {
