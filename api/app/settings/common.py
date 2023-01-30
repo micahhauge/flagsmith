@@ -157,9 +157,6 @@ INSTALLED_APPS = [
     "softdelete",
     "app_analytics",
 ]
-# TODO: this
-# if GOOGLE_ANALYTICS_KEY or INFLUXDB_TOKEN or USE_POSTGRES_FOR_ANALYTICS:
-#     INSTALLED_APPS.append("app_analytics")
 
 SITE_ID = 1
 
