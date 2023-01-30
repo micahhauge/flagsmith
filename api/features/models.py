@@ -806,6 +806,7 @@ class FeatureStateValue(
         return clone
 
     def get_update_log_message(self, history_instance):
+        # TODO: can we tell if self.feature_state was also updated and ignore this if so?
         return self.feature_state.get_update_log_message(history_instance.feature_state)
 
     def _get_environment(self) -> typing.Optional["Environment"]:
