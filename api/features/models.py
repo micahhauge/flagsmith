@@ -26,7 +26,6 @@ from django_lifecycle import (
     hook,
 )
 from ordered_model.models import OrderedModelBase
-from simple_history.models import HistoricalRecords
 from softdelete.models import SoftDeleteObject
 
 from audit.constants import (
@@ -784,13 +783,17 @@ class FeatureState(
 
 
 class FeatureStateValue(
-    AbstractBaseFeatureValueModel, AbstractBaseExportableModel, SoftDeleteObject
+    AbstractBaseFeatureValueModel,
+    AbstractBaseExportableModel,
+    SoftDeleteObject,
+    abstract_base_auditable_model_factory(["uuid"]),
 ):
+    history_record_class_path = "features.models.HistoricalFeatureStateValue"
+    related_object_type = RelatedObjectType.FEATURE_STATE
+
     feature_state = models.OneToOneField(
         FeatureState, related_name="feature_state_value", on_delete=models.CASCADE
     )
-
-    history = HistoricalRecords(excluded_fields=["uuid"])
 
     objects = FeatureStateValueManager()
 
@@ -801,3 +804,9 @@ class FeatureStateValue(
         clone.feature_state = feature_state
         clone.save()
         return clone
+
+    def get_update_log_message(self, history_instance):
+        return self.feature_state.get_update_log_message(history_instance.feature_state)
+
+    def _get_environment(self) -> typing.Optional["Environment"]:
+        return self.feature_state.environment
