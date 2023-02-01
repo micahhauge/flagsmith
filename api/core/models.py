@@ -122,10 +122,11 @@ class _AbstractBaseAuditableModel(models.Model):
 
 def abstract_base_auditable_model_factory(
     historical_records_excluded_fields: typing.List[str] = None,
+    historical_records_base_classes: typing.Iterable[typing.Type[models.Model]] = None,
 ) -> typing.Type[_AbstractBaseAuditableModel]:
     class Base(_AbstractBaseAuditableModel):
         history = HistoricalRecords(
-            bases=[BaseHistoricalModel],
+            bases=historical_records_base_classes or [BaseHistoricalModel],
             excluded_fields=historical_records_excluded_fields or [],
             inherit=True,
         )

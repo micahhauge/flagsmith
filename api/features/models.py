@@ -8,6 +8,7 @@ from copy import deepcopy
 
 from core.models import (
     AbstractBaseExportableModel,
+    BaseHistoricalModel,
     abstract_base_auditable_model_factory,
 )
 from django.core.exceptions import (
@@ -33,11 +34,14 @@ from audit.constants import (
     FEATURE_DELETED_MESSAGE,
     FEATURE_SEGMENT_UPDATED_MESSAGE,
     FEATURE_STATE_UPDATED_MESSAGE,
+    FEATURE_STATE_VALUE_UPDATED_MESSAGE,
     FEATURE_UPDATED_MESSAGE,
     IDENTITY_FEATURE_STATE_DELETED_MESSAGE,
     IDENTITY_FEATURE_STATE_UPDATED_MESSAGE,
+    IDENTITY_FEATURE_STATE_VALUE_UPDATED_MESSAGE,
     SEGMENT_FEATURE_STATE_DELETED_MESSAGE,
     SEGMENT_FEATURE_STATE_UPDATED_MESSAGE,
+    SEGMENT_FEATURE_STATE_VALUE_UPDATED_MESSAGE,
 )
 from audit.related_object_type import RelatedObjectType
 from environments.identities.helpers import (
@@ -45,7 +49,10 @@ from environments.identities.helpers import (
 )
 from features.constants import ENVIRONMENT, FEATURE_SEGMENT, IDENTITY
 from features.custom_lifecycle import CustomLifecycleModelMixin
-from features.feature_states.models import AbstractBaseFeatureValueModel
+from features.feature_states.models import (
+    AbstractBaseFeatureValueModel,
+    FeatureValueMixin,
+)
 from features.feature_types import MULTIVARIATE, STANDARD
 from features.helpers import get_correctly_typed_value
 from features.managers import (
@@ -741,7 +748,11 @@ class FeatureState(
                 self.feature.name,
                 self.feature_segment.segment.name,
             )
-        return FEATURE_STATE_UPDATED_MESSAGE % self.feature.name
+        return FEATURE_STATE_UPDATED_MESSAGE % (
+            history_instance.enabled,
+            self.enabled,
+            self.feature.name,
+        )
 
     def get_delete_log_message(self, history_instance) -> typing.Optional[str]:
         try:
@@ -782,11 +793,19 @@ class FeatureState(
         return self.feature.project
 
 
+class FeatureStateValueBaseHistoricalModel(BaseHistoricalModel, FeatureValueMixin):
+    class Meta:
+        abstract = True
+
+
 class FeatureStateValue(
     AbstractBaseFeatureValueModel,
     AbstractBaseExportableModel,
     SoftDeleteObject,
-    abstract_base_auditable_model_factory(["uuid"]),
+    abstract_base_auditable_model_factory(
+        historical_records_excluded_fields=["uuid"],
+        historical_records_base_classes=[FeatureStateValueBaseHistoricalModel],
+    ),
 ):
     history_record_class_path = "features.models.HistoricalFeatureStateValue"
     related_object_type = RelatedObjectType.FEATURE_STATE
@@ -806,8 +825,32 @@ class FeatureStateValue(
         return clone
 
     def get_update_log_message(self, history_instance):
-        # TODO: can we tell if self.feature_state was also updated and ignore this if so?
-        return self.feature_state.get_update_log_message(history_instance.feature_state)
+        feature_state = self.feature_state
+        if (
+            feature_state.change_request
+            and not feature_state.change_request.committed_at
+        ):
+            return
+
+        if feature_state.identity:
+            return IDENTITY_FEATURE_STATE_VALUE_UPDATED_MESSAGE % (
+                history_instance.prev_record.value,
+                self.value,
+                feature_state.feature.name,
+                feature_state.identity.identifier,
+            )
+        elif feature_state.feature_segment:
+            return SEGMENT_FEATURE_STATE_VALUE_UPDATED_MESSAGE % (
+                history_instance.prev_record.value,
+                self.value,
+                feature_state.feature.name,
+                feature_state.feature_segment.segment.name,
+            )
+        return FEATURE_STATE_VALUE_UPDATED_MESSAGE % (
+            history_instance.prev_record.value,
+            self.value,
+            feature_state.feature.name,
+        )
 
     def _get_environment(self) -> typing.Optional["Environment"]:
         return self.feature_state.environment
