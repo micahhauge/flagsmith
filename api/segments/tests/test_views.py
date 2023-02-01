@@ -3,12 +3,12 @@ import random
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.urls import reverse
 from flag_engine.api.document_builders import build_identity_document
 from pytest_lazyfixture import lazy_fixture
 from rest_framework import status
 
-from audit.constants import SEGMENT_UPDATED_MESSAGE
 from audit.models import AuditLog
 from audit.related_object_type import RelatedObjectType
 from environments.models import Environment
@@ -363,7 +363,7 @@ def test_create_segments_with_description_condition(project, client):
 @pytest.mark.parametrize(
     "client", [lazy_fixture("master_api_key_client"), lazy_fixture("admin_client")]
 )
-def test_update_segment_rules_creates_audit_log(project, client, segment):
+def test_update_segment_rules_creates_audit_log(project, client, segment, mocker):
     # Given
     url = reverse(
         "api-v1:projects:project-segments-detail", args=[project.id, segment.id]
@@ -375,6 +375,8 @@ def test_update_segment_rules_creates_audit_log(project, client, segment):
         }
     ]
 
+    mock_environment_class = mocker.patch("audit.signals.Environment")
+
     # When
     response = client.patch(
         url, data=json.dumps({"rules": rules}), content_type="application/json"
@@ -384,7 +386,9 @@ def test_update_segment_rules_creates_audit_log(project, client, segment):
     assert response.status_code == status.HTTP_200_OK
 
     assert AuditLog.objects.filter(
-        related_object_type=RelatedObjectType.SEGMENT.name,
-        related_object_id=segment.id,
-        log=SEGMENT_UPDATED_MESSAGE % segment.name,
+        related_object_type=RelatedObjectType.SEGMENT_CONDITION.name,
     ).exists()
+
+    mock_environment_class.write_environments_to_dynamodb.assert_called_once_with(
+        Q(project=project)
+    )

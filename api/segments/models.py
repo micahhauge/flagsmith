@@ -10,6 +10,7 @@ from core.models import (
 from django.core.exceptions import ValidationError
 from django.db import models
 from flag_engine.utils.semver import is_semver, remove_semver_suffix
+from softdelete.models import SoftDeleteObject
 
 from audit.constants import SEGMENT_CREATED_MESSAGE, SEGMENT_UPDATED_MESSAGE
 from audit.related_object_type import RelatedObjectType
@@ -52,7 +53,9 @@ IN = "IN"
 
 
 class Segment(
-    AbstractBaseExportableModel, abstract_base_auditable_model_factory(["uuid"])
+    AbstractBaseExportableModel,
+    abstract_base_auditable_model_factory(["uuid"]),
+    SoftDeleteObject,
 ):
     history_record_class_path = "segments.models.HistoricalSegment"
     related_object_type = RelatedObjectType.SEGMENT
@@ -162,7 +165,9 @@ class SegmentRule(AbstractBaseExportableModel):
         return rule.segment
 
 
-class Condition(AbstractBaseExportableModel):
+class Condition(
+    AbstractBaseExportableModel, abstract_base_auditable_model_factory(["uuid"])
+):
     CONDITION_TYPES = (
         (EQUAL, "Exactly Matches"),
         (GREATER_THAN, "Greater than"),
@@ -188,6 +193,9 @@ class Condition(AbstractBaseExportableModel):
     rule = models.ForeignKey(
         SegmentRule, on_delete=models.CASCADE, related_name="conditions"
     )
+
+    related_object_type = RelatedObjectType.SEGMENT_CONDITION
+    history_record_class_path = "segments.models.HistoricalCondition"
 
     def __str__(self):
         return "Condition for %s: %s %s %s" % (
@@ -350,3 +358,23 @@ class Condition(AbstractBaseExportableModel):
             return re.compile(str(self.value)).match(value) is not None
 
         return False
+
+    def _get_project(self):
+        return self.rule.get_segment().project
+
+    def get_update_log_message(self, history_instance):
+        return f"Segment condition updated for segment '{self._get_segment()}'"
+
+    def get_create_log_message(self, history_instance):
+        return f"Segment condition created for segment '{self._get_segment()}'."
+
+    def get_delete_log_message(self, history_instance):
+        if not self._get_segment().deleted_at:
+            return f"Segment condition delete for segment '{self._get_segment()}'."
+
+    def _get_segment(self):
+        segment = getattr(self, "_segment", None)
+        if not segment:
+            segment = self.rule.get_segment()
+            self._segment = segment
+        return segment
